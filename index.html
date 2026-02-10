@@ -1,95 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Cloud Diary</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cloud Diary</title>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-gradient-to-br from-indigo-100 to-purple-200 min-h-screen p-6">
+<body id="body"
+class="bg-gradient-to-br from-blue-100 to-purple-200 min-h-screen transition-all duration-500">
 
-<div class="max-w-3xl mx-auto">
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-  <!-- Header -->
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="text-3xl font-bold text-indigo-700">☁ Cloud Diary</h1>
-    <button id="loginBtn"
-      class="bg-indigo-600 text-white px-4 py-2 rounded-lg shadow hover:bg-indigo-700">
-      Login
-    </button>
+<!-- Header -->
+<div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
+  <h1 id="title" class="text-3xl sm:text-4xl font-bold text-indigo-700 text-center sm:text-left">
+    ☁ Cloud Diary
+  </h1>
+
+  <button id="themeBtn"
+    onclick="toggleTheme()"
+    class="px-5 py-2 bg-gray-800 text-white rounded-lg transition-all duration-300">
+    🌙 Night
+  </button>
+</div>
+
+<!-- Editor Card -->
+<div id="card"
+  class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl transition-all duration-500">
+
+  <!-- Formatting -->
+  <div class="flex flex-wrap gap-3 mb-4">
+    <button onclick="format('bold')" class="px-4 py-2 bg-gray-200 rounded font-bold">B</button>
+    <button onclick="format('italic')" class="px-4 py-2 bg-gray-200 rounded italic">I</button>
+    <button onclick="format('underline')" class="px-4 py-2 bg-gray-200 rounded underline">U</button>
   </div>
 
-  <!-- Editor -->
-  <div class="bg-white p-6 rounded-xl shadow-lg mb-6">
-
-    <div class="flex gap-2 mb-3">
-      <button onclick="format('bold')" class="px-3 py-1 bg-gray-200 rounded">B</button>
-      <button onclick="format('italic')" class="px-3 py-1 bg-gray-200 rounded italic">I</button>
-      <button onclick="format('underline')" class="px-3 py-1 bg-gray-200 rounded underline">U</button>
-    </div>
-
-    <div id="editor"
-      contenteditable="true"
-      class="border p-4 rounded-lg min-h-[120px] focus:outline-none">
-    </div>
-
-    <button onclick="saveEntry()"
-      class="mt-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
-      Save Entry
-    </button>
+  <!-- Writing Space -->
+  <div id="editor"
+    contenteditable="true"
+    class="border-2 border-gray-200 p-6 rounded-xl min-h-[250px] sm:min-h-[350px] lg:min-h-[450px] text-lg focus:outline-none focus:border-indigo-400 transition-all">
   </div>
 
-  <!-- Entries List -->
-  <div id="entries" class="space-y-4"></div>
+  <button onclick="saveEntry()"
+    class="mt-6 w-full sm:w-auto bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all">
+    Save Entry
+  </button>
+</div>
+
+<!-- Entries -->
+<div id="entries" class="mt-10 space-y-6"></div>
 
 </div>
 
 <script>
 const API_URL = "https://rkqkyfrjl8.execute-api.ap-south-1.amazonaws.com/entries";
-const COGNITO_DOMAIN = "https://your-domain.auth.ap-south-1.amazoncognito.com";
-const CLIENT_ID = "YOUR_APP_CLIENT_ID";
-const REDIRECT_URI = "http://localhost:5500/index.html";
+let accessToken = localStorage.getItem("token");
+let isDark = false;
 
-let accessToken = null;
+/* THEME */
+function toggleTheme() {
+  const body = document.getElementById("body");
+  const card = document.getElementById("card");
+  const title = document.getElementById("title");
+  const btn = document.getElementById("themeBtn");
 
-/* ---------- Login ---------- */
-
-document.getElementById("loginBtn").onclick = () => {
-  window.location.href =
-    `${COGNITO_DOMAIN}/login?client_id=${CLIENT_ID}` +
-    `&response_type=token&scope=email+openid+profile` +
-    `&redirect_uri=${REDIRECT_URI}`;
-};
-
-/* ---------- Handle Token After Redirect ---------- */
-
-window.onload = () => {
-  const hash = window.location.hash;
-  if (hash.includes("access_token")) {
-    const params = new URLSearchParams(hash.substring(1));
-    accessToken = params.get("access_token");
-    localStorage.setItem("token", accessToken);
+  if (!isDark) {
+    body.className =
+      "bg-gradient-to-br from-gray-900 to-black text-white min-h-screen transition-all duration-500";
+    card.className =
+      "bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-xl transition-all duration-500";
+    title.className = "text-3xl sm:text-4xl font-bold text-white";
+    btn.innerHTML = "☀️ Day";
+    btn.className =
+      "px-5 py-2 bg-yellow-500 text-black rounded-lg transition-all duration-300";
+    isDark = true;
   } else {
-    accessToken = localStorage.getItem("token");
+    body.className =
+      "bg-gradient-to-br from-blue-100 to-purple-200 min-h-screen transition-all duration-500";
+    card.className =
+      "bg-white p-6 sm:p-8 rounded-2xl shadow-xl transition-all duration-500";
+    title.className = "text-3xl sm:text-4xl font-bold text-indigo-700";
+    btn.innerHTML = "🌙 Night";
+    btn.className =
+      "px-5 py-2 bg-gray-800 text-white rounded-lg transition-all duration-300";
+    isDark = false;
   }
-
-  if (accessToken) {
-    loadEntries();
-  }
-};
-
-/* ---------- Rich Text ---------- */
-
-function format(command) {
-  document.execCommand(command, false, null);
 }
 
-/* ---------- Save Entry ---------- */
+/* Text Formatting */
+function format(cmd) {
+  document.execCommand(cmd, false, null);
+}
 
+/* Save Entry */
 async function saveEntry() {
   const content = document.getElementById("editor").innerHTML;
 
-  const response = await fetch(API_URL, {
+  await fetch(API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -102,13 +110,10 @@ async function saveEntry() {
   loadEntries();
 }
 
-/* ---------- Load Entries ---------- */
-
+/* Load Entries */
 async function loadEntries() {
   const response = await fetch(API_URL, {
-    headers: {
-      "Authorization": "Bearer " + accessToken
-    }
+    headers: { "Authorization": "Bearer " + accessToken }
   });
 
   const data = await response.json();
@@ -117,10 +122,11 @@ async function loadEntries() {
 
   data.forEach(entry => {
     const div = document.createElement("div");
-    div.className = "bg-white p-4 rounded-lg shadow";
+    div.className =
+      "bg-white p-6 rounded-xl shadow-md transition-all hover:scale-[1.02]";
 
     div.innerHTML = `
-      <div class="mb-2">${entry.Content || entry.content}</div>
+      <div class="mb-3 text-lg">${entry.Content || entry.content}</div>
       <button onclick="deleteEntry('${entry.EntryID}')"
         class="text-red-500 hover:underline">Delete</button>
     `;
@@ -129,8 +135,7 @@ async function loadEntries() {
   });
 }
 
-/* ---------- Delete Entry ---------- */
-
+/* Delete */
 async function deleteEntry(id) {
   await fetch(`${API_URL}/${id}`, {
     method: "DELETE",
@@ -138,10 +143,11 @@ async function deleteEntry(id) {
       "Authorization": "Bearer " + accessToken
     }
   });
-
   loadEntries();
 }
 
+if (accessToken) loadEntries();
 </script>
+
 </body>
 </html>
