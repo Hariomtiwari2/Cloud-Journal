@@ -1,152 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cloud Diary</title>
-<script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cloud Diary (Public Demo)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body id="body"
-class="bg-gradient-to-br from-blue-100 to-purple-200 min-h-screen transition-all duration-500">
+<body class="h-screen bg-gray-100">
 
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="flex h-screen">
 
-<!-- Header -->
-<div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
-  <h1 id="title" class="text-3xl sm:text-4xl font-bold text-indigo-700 text-center sm:text-left">
-    ☁ Cloud Diary
-  </h1>
+  <!-- LEFT SIDEBAR -->
+  <div class="w-1/3 md:w-1/4 bg-white border-r flex flex-col">
 
-  <button id="themeBtn"
-    onclick="toggleTheme()"
-    class="px-5 py-2 bg-gray-800 text-white rounded-lg transition-all duration-300">
-    🌙 Night
-  </button>
-</div>
+    <div class="p-4 border-b flex justify-between items-center">
+      <h2 class="text-lg font-bold">My Entries</h2>
+      <button onclick="openNewEntry()"
+        class="bg-green-500 text-white px-3 py-1 rounded-lg text-sm">
+        + New
+      </button>
+    </div>
 
-<!-- Editor Card -->
-<div id="card"
-  class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl transition-all duration-500">
+    <div id="entryList" class="flex-1 overflow-y-auto"></div>
 
-  <!-- Formatting -->
-  <div class="flex flex-wrap gap-3 mb-4">
-    <button onclick="format('bold')" class="px-4 py-2 bg-gray-200 rounded font-bold">B</button>
-    <button onclick="format('italic')" class="px-4 py-2 bg-gray-200 rounded italic">I</button>
-    <button onclick="format('underline')" class="px-4 py-2 bg-gray-200 rounded underline">U</button>
   </div>
 
-  <!-- Writing Space -->
-  <div id="editor"
-    contenteditable="true"
-    class="border-2 border-gray-200 p-6 rounded-xl min-h-[250px] sm:min-h-[350px] lg:min-h-[450px] text-lg focus:outline-none focus:border-indigo-400 transition-all">
+  <!-- RIGHT PANEL -->
+  <div class="flex-1 flex flex-col">
+
+    <div id="mainPanel"
+      class="flex-1 p-8 overflow-y-auto bg-gray-50">
+
+      <div class="text-gray-400 text-center mt-40">
+        Select an entry or create a new one
+      </div>
+
+    </div>
+
   </div>
-
-  <button onclick="saveEntry()"
-    class="mt-6 w-full sm:w-auto bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all">
-    Save Entry
-  </button>
-</div>
-
-<!-- Entries -->
-<div id="entries" class="mt-10 space-y-6"></div>
 
 </div>
 
 <script>
-const API_URL = "https://rkqkyfrjl8.execute-api.ap-south-1.amazonaws.com/entries";
-let accessToken = localStorage.getItem("token");
-let isDark = false;
+/* =====================================================
+   PUBLIC DEMO MODE
+   - No authentication
+   - No backend
+   - No token storage
+   - Safe for public repositories
+   ===================================================== */
 
-/* THEME */
-function toggleTheme() {
-  const body = document.getElementById("body");
-  const card = document.getElementById("card");
-  const title = document.getElementById("title");
-  const btn = document.getElementById("themeBtn");
+/*
+  TODO (private version only):
+  - Add OAuth (Cognito/Auth0/etc)
+  - Use access tokens (not id tokens)
+  - Store tokens in HttpOnly cookies
+  - Sanitize rich text before saving/rendering
+*/
 
-  if (!isDark) {
-    body.className =
-      "bg-gradient-to-br from-gray-900 to-black text-white min-h-screen transition-all duration-500";
-    card.className =
-      "bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-xl transition-all duration-500";
-    title.className = "text-3xl sm:text-4xl font-bold text-white";
-    btn.innerHTML = "☀️ Day";
-    btn.className =
-      "px-5 py-2 bg-yellow-500 text-black rounded-lg transition-all duration-300";
-    isDark = true;
-  } else {
-    body.className =
-      "bg-gradient-to-br from-blue-100 to-purple-200 min-h-screen transition-all duration-500";
-    card.className =
-      "bg-white p-6 sm:p-8 rounded-2xl shadow-xl transition-all duration-500";
-    title.className = "text-3xl sm:text-4xl font-bold text-indigo-700";
-    btn.innerHTML = "🌙 Night";
-    btn.className =
-      "px-5 py-2 bg-gray-800 text-white rounded-lg transition-all duration-300";
-    isDark = false;
-  }
-}
+let entries = [];
+let entryCounter = 1;
 
-/* Text Formatting */
-function format(cmd) {
-  document.execCommand(cmd, false, null);
-}
+/* ============================= */
+/* ENTRY LIST                    */
+/* ============================= */
 
-/* Save Entry */
-async function saveEntry() {
-  const content = document.getElementById("editor").innerHTML;
+function renderEntryList() {
+  const list = document.getElementById("entryList");
+  list.innerHTML = "";
 
-  await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + accessToken
-    },
-    body: JSON.stringify({ content })
-  });
-
-  document.getElementById("editor").innerHTML = "";
-  loadEntries();
-}
-
-/* Load Entries */
-async function loadEntries() {
-  const response = await fetch(API_URL, {
-    headers: { "Authorization": "Bearer " + accessToken }
-  });
-
-  const data = await response.json();
-  const container = document.getElementById("entries");
-  container.innerHTML = "";
-
-  data.forEach(entry => {
+  entries.forEach(entry => {
     const div = document.createElement("div");
     div.className =
-      "bg-white p-6 rounded-xl shadow-md transition-all hover:scale-[1.02]";
+      "p-4 border-b cursor-pointer hover:bg-gray-100 transition";
 
-    div.innerHTML = `
-      <div class="mb-3 text-lg">${entry.Content || entry.content}</div>
-      <button onclick="deleteEntry('${entry.EntryID}')"
-        class="text-red-500 hover:underline">Delete</button>
-    `;
+    div.textContent = entry.preview;
+    div.onclick = () => openEntry(entry);
 
-    container.appendChild(div);
+    list.appendChild(div);
   });
 }
 
-/* Delete */
-async function deleteEntry(id) {
-  await fetch(`${API_URL}/${id}`, {
-    method: "DELETE",
-    headers: {
-      "Authorization": "Bearer " + accessToken
-    }
-  });
-  loadEntries();
+/* ============================= */
+/* ENTRY VIEW                    */
+/* ============================= */
+
+function openEntry(entry) {
+  document.getElementById("mainPanel").innerHTML = `
+    <div class="max-w-3xl mx-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">Your Entry</h2>
+        <button onclick="deleteEntry(${entry.id})"
+          class="text-red-500 hover:underline">
+          Delete
+        </button>
+      </div>
+
+      <div class="bg-white p-6 rounded-xl shadow text-lg whitespace-pre-wrap">
+        ${escapeHTML(entry.content)}
+      </div>
+    </div>
+  `;
 }
 
-if (accessToken) loadEntries();
+/* ============================= */
+/* NEW ENTRY                     */
+/* ============================= */
+
+function openNewEntry() {
+  document.getElementById("mainPanel").innerHTML = `
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-2xl font-bold mb-4">New Entry</h2>
+
+      <textarea id="editor"
+        class="border p-6 rounded-xl min-h-[300px] w-full bg-white focus:outline-none"
+        placeholder="Write your thoughts..."></textarea>
+
+      <button onclick="saveEntry()"
+        class="mt-6 bg-green-600 text-white px-6 py-2 rounded-lg">
+        Save
+      </button>
+    </div>
+  `;
+}
+
+/* ============================= */
+/* DATA HANDLING (SAFE)          */
+/* ============================= */
+
+function saveEntry() {
+  const content = document.getElementById("editor").value.trim();
+  if (!content) return;
+
+  entries.unshift({
+    id: entryCounter++,
+    content,
+    preview: content.slice(0, 40) + (content.length > 40 ? "…" : "")
+  });
+
+  renderEntryList();
+  openEntry(entries[0]);
+}
+
+function deleteEntry(id) {
+  entries = entries.filter(e => e.id !== id);
+  renderEntryList();
+
+  document.getElementById("mainPanel").innerHTML = `
+    <div class="text-gray-400 text-center mt-40">
+      Entry deleted
+    </div>
+  `;
+}
+
+/* ============================= */
+/* UTIL                          */
+/* ============================= */
+
+function escapeHTML(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 </script>
 
 </body>
